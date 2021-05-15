@@ -1,9 +1,10 @@
-import { Resolver, Query, Mutation, ObjectType, Field, Arg } from "type-graphql";
+import { Resolver, Query, Mutation, ObjectType, Field, Arg, Ctx } from "type-graphql";
 import { User } from "../entities/User";
 import { CredentialsInput } from "../gql-types/input";
 import { InputError } from "../gql-types/error";
 import { validateSignup } from '../utilities/validators';
 import argon2 from "argon2";
+import { CustomContext } from "../types";
 
 
 @ObjectType()
@@ -20,14 +21,28 @@ class UserResponse {
 @Resolver()
 export default class UserResolver {
 
-    @Query(() => String)
-    simple(){
-        return "Hello there";
+    @Query(() => User, { nullable: true })
+    async me(
+        @Ctx() { req }: CustomContext
+    ) {
+        if(req.session.userId){
+            const currUser = await User.findOne(
+                {
+                    where: { id: req.session.userId }
+                }
+            );
+
+            return currUser
+        }else{
+            // User not logged in
+            return null
+        }        
     }
 
     @Mutation(() => UserResponse)
     async signup(
-        @Arg('credentials') credentials: CredentialsInput,
+        @Ctx() { req }: CustomContext,
+        @Arg('credentials') credentials: CredentialsInput
     ): Promise<UserResponse> {
 
         const nonDbErrors = validateSignup(credentials);
@@ -52,13 +67,18 @@ export default class UserResolver {
             }
         }
         
+
+        // Keep user logged in after they have just signedup
+        req.session.userId = user?.id;
+
         return { user };
 
     }
 
     @Mutation(() => UserResponse)
     async login(
-        @Arg('credentials') credentials: CredentialsInput
+        @Arg('credentials') credentials: CredentialsInput,
+        @Ctx() { req }: CustomContext
     ): Promise<UserResponse> {
         const user = await User.findOne({
             where: {
@@ -85,6 +105,8 @@ export default class UserResolver {
             }
         }
 
+
+        req.session.userId = user.id;
         // Username exists and the password is valid. Allow to login and return the current user
         return { user };
     }

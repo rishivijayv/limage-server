@@ -7,7 +7,9 @@ import { User } from './entities/User';
 import { __prod__ } from './constants';
 import { CustomContext } from './types';
 import UserResolver from './resolvers/user';
-
+import session from "express-session";
+import connectRedis from "connect-redis";
+import redis from "redis";
 
 
 async function main(){
@@ -25,6 +27,28 @@ async function main(){
     });
 
     const app = express();
+    
+    const RedisStore = connectRedis(session);
+    const redisClient = redis.createClient();
+
+
+    // Session middleware
+    app.use(
+        session({
+            name: process.env.COOKIE_NAME,
+            store: new RedisStore({ client: redisClient }),
+            cookie: {
+                maxAge: 1000 * 60 * 60 * 24, // 1 day
+                httpOnly: true,
+                secure: __prod__,
+                sameSite: "lax"
+            },
+            secret: process.env.COOKIE_SECRET!,
+            saveUninitialized: false,
+            resave: false,
+
+        })
+    )
 
     const apolloServer = new ApolloServer({
         schema: await buildSchema({
