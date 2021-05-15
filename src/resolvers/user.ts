@@ -56,4 +56,37 @@ export default class UserResolver {
 
     }
 
+    @Mutation(() => UserResponse)
+    async login(
+        @Arg('credentials') credentials: CredentialsInput
+    ): Promise<UserResponse> {
+        const user = await User.findOne({
+            where: {
+                username: credentials.username
+            }
+        });
+
+        if(!user){
+            return {
+                errors: [{
+                    fieldName: "username",
+                    description: "The Username does not exist"
+                }]
+            }
+        }
+
+        const validPassword = await argon2.verify(user.password, credentials.password);
+        if(!validPassword){
+            return {
+                errors: [{
+                    fieldName: "password",
+                    description: "The password is not valid"
+                }]
+            }
+        }
+
+        // Username exists and the password is valid. Allow to login and return the current user
+        return { user };
+    }
+
 }
