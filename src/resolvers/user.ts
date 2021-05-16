@@ -111,4 +111,21 @@ export default class UserResolver {
         return { user };
     }
 
+    @Mutation(() => Boolean)
+    logout(
+        @Ctx() { req, res }: CustomContext
+    ): Promise<Boolean> {
+        return new Promise(resolve => {
+            req.session.destroy(err => {
+                res.clearCookie(process.env.COOKIE_NAME!);
+                if(err){
+                    console.log(err);
+                    resolve(false);
+                }else{
+                    resolve(true);
+                }
+            });
+        });
+    }
+
 }
