@@ -10,6 +10,7 @@ import UserResolver from './resolvers/user';
 import session from "express-session";
 import connectRedis from "connect-redis";
 import redis from "redis";
+import cors from "cors";
 
 
 async function main(){
@@ -30,6 +31,13 @@ async function main(){
     
     const RedisStore = connectRedis(session);
     const redisClient = redis.createClient();
+
+    app.use(
+        cors({
+            origin: process.env.CORS_ORIGIN,
+            credentials: true
+        })
+    )
 
 
     // Session middleware
@@ -59,7 +67,7 @@ async function main(){
     });
 
     // Adding ApolloServer as a middleware to express
-    apolloServer.applyMiddleware({ app });
+    apolloServer.applyMiddleware({ app, cors: false });
 
     app.listen(4000, () => {
         console.log("Server now running at port 4000");
