@@ -2,9 +2,10 @@ import { Resolver, Query, Mutation, ObjectType, Field, Arg, Ctx } from "type-gra
 import { User } from "../entities/User";
 import { CredentialsInput } from "../gql-types/input";
 import { InputError } from "../gql-types/error";
+import { GraphQLUpload } from "graphql-upload";
 import { validateSignup } from '../utilities/validators';
 import argon2 from "argon2";
-import { CustomContext } from "../types";
+import { CustomContext, Upload } from "../types";
 
 
 @ObjectType()
@@ -17,6 +18,22 @@ class UserResponse {
     user?: User;
 }
 
+// @ObjectType()
+// class ImageUploadResponse {
+    
+//     @Field()
+//     filename: string;
+
+//     @Field()
+//     mimetype: string;
+
+//     @Field()
+//     encoding: string;
+
+//     @Field()
+//     url: string;
+
+// }
 
 @Resolver()
 export default class UserResolver {
@@ -128,4 +145,26 @@ export default class UserResolver {
         });
     }
 
+    @Mutation(() => Boolean)
+    async upload(
+        @Arg('picture', () => GraphQLUpload)
+        {
+            createReadStream,
+            filename
+        }: Upload,
+        @Ctx() { uploader }: CustomContext
+    ): Promise<Boolean> {
+        const uploadStream = uploader.createUploadStream(filename);
+        createReadStream().pipe(uploadStream.writeStream);
+        const result = await uploadStream.promise;
+
+        if(result){
+            return true;
+        }else{
+            return false;
+        }
+
+    }
+
 }
+
