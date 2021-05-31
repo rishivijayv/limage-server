@@ -1,22 +1,22 @@
-import { Entity, PrimaryGeneratedColumn, Column, ManyToOne } from "typeorm";
+import { Entity, PrimaryGeneratedColumn, Column, ManyToOne, BaseEntity } from "typeorm";
 import { User } from "./User";
-import { Field, ObjectType, Int } from "type-graphql";
+import { Field, ObjectType, Int} from "type-graphql";
 
 @ObjectType()
 @Entity()
-export class Image {
+export class Image extends BaseEntity {
 
     @Field()
     @PrimaryGeneratedColumn()
-    id: number;
+    id!: number;
 
     @Field()
     @Column()
-    location: string;
+    location!: string;
 
     @Field()
     @Column()
-    label: string;
+    label!: string;
 
     @Field(() => Int)
     @ManyToOne(() => User, user => user.images)

@@ -1,11 +1,11 @@
 import { Resolver, Query, Mutation, ObjectType, Field, Arg, Ctx } from "type-graphql";
 import { User } from "../entities/User";
-import { CredentialsInput } from "../gql-types/input";
+import { Image } from "../entities/Image";
+import { CredentialsInput, ImageInput } from "../gql-types/input";
 import { InputError } from "../gql-types/error";
-import { GraphQLUpload } from "graphql-upload";
 import { validateSignup } from '../utilities/validators';
 import argon2 from "argon2";
-import { CustomContext, Upload } from "../types";
+import { CustomContext } from "../types";
 
 
 @ObjectType()
@@ -130,16 +130,27 @@ export default class UserResolver {
 
     @Mutation(() => Boolean)
     async upload(
-        @Arg('picture', () => GraphQLUpload)
-        {
-            createReadStream,
-            filename
-        }: Upload,
-        @Ctx() { uploader }: CustomContext
+        @Arg('image') { file, label }: ImageInput,
+        @Ctx() { req, uploader }: CustomContext
     ): Promise<Boolean> {
+
+        const { createReadStream, filename } = await file;
+        console.log(filename);
+        console.log(createReadStream);
         const uploadStream = uploader.createUploadStream(filename);
         createReadStream().pipe(uploadStream.writeStream);
         const result = await uploadStream.promise;
+
+        try{
+            const user = await User.findOne({
+                where: { id: req.session.userId }
+            });
+
+            // User is guaranteed to exist as they are authenticated
+            await Image.create({ location: result.Location, label, user }).save();
+        }catch(error){
+            return false;
+        }
 
         if(result){
             return true;
