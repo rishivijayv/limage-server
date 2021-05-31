@@ -1,4 +1,4 @@
-import { Resolver, Query, Mutation, ObjectType, Field, Arg, Ctx } from "type-graphql";
+import { Resolver, Query, Mutation, ObjectType, Field, Arg, Ctx, UseMiddleware } from "type-graphql";
 import { User } from "../entities/User";
 import { Image } from "../entities/Image";
 import { CredentialsInput, ImageInput } from "../gql-types/input";
@@ -6,6 +6,7 @@ import { InputError } from "../gql-types/error";
 import { validateSignup } from '../utilities/validators';
 import argon2 from "argon2";
 import { CustomContext } from "../types";
+import { isAuthenticated } from "../middleware/isAuthenticated";
 
 
 @ObjectType()
@@ -129,6 +130,7 @@ export default class UserResolver {
     }
 
     @Mutation(() => Boolean)
+    @UseMiddleware(isAuthenticated)
     async upload(
         @Arg('image') { file, label }: ImageInput,
         @Ctx() { req, uploader }: CustomContext
