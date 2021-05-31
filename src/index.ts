@@ -5,6 +5,7 @@ import { createConnection } from "typeorm";
 import { buildSchema } from "type-graphql";
 import { graphqlUploadExpress } from "graphql-upload";
 import { User } from './entities/User';
+import { Image } from './entities/Image';
 import { __prod__ } from './constants';
 import { CustomContext } from './types';
 import { Uploader } from './utilities/uploader';
@@ -24,7 +25,7 @@ async function main(){
         username: process.env.DB_USERNAME,
         password: process.env.DB_PASSWORD,
         database: process.env.DB_NAME,
-        entities: [ User ],
+        entities: [ User, Image ],
         synchronize: !__prod__,
         logNotifications: true
     });

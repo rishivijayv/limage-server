@@ -1,4 +1,5 @@
-import { Entity, Column, PrimaryGeneratedColumn, BaseEntity, CreateDateColumn, UpdateDateColumn } from "typeorm";
+import { Entity, Column, PrimaryGeneratedColumn, BaseEntity, CreateDateColumn, UpdateDateColumn, OneToMany } from "typeorm";
+import { Image } from './Image';
 import { Field, ObjectType } from "type-graphql";
 
 @ObjectType()
@@ -23,4 +24,7 @@ export class User extends BaseEntity {
     @Field(() => String)
     @UpdateDateColumn()
     updatedAt: Date;
+
+    @OneToMany(() => Image, image => image.user)
+    images: Image[];
 }

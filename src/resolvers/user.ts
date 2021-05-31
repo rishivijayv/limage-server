@@ -18,23 +18,6 @@ class UserResponse {
     user?: User;
 }
 
-// @ObjectType()
-// class ImageUploadResponse {
-    
-//     @Field()
-//     filename: string;
-
-//     @Field()
-//     mimetype: string;
-
-//     @Field()
-//     encoding: string;
-
-//     @Field()
-//     url: string;
-
-// }
-
 @Resolver()
 export default class UserResolver {
 
