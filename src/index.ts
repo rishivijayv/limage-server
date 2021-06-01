@@ -10,6 +10,7 @@ import { __prod__ } from './constants';
 import { CustomContext } from './types';
 import { Uploader } from './utilities/uploader';
 import UserResolver from './resolvers/user';
+import ImageResolver from './resolvers/image';
 import session from "express-session";
 import connectRedis from "connect-redis";
 import redis from "redis";
@@ -73,7 +74,7 @@ async function main(){
 
     const apolloServer = new ApolloServer({
         schema: await buildSchema({
-            resolvers: [ UserResolver ],
+            resolvers: [ UserResolver, ImageResolver ],
             validate: false
         }),
         context: ({ req, res }): CustomContext => ({ req, res, uploader }),

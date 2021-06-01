@@ -1,12 +1,10 @@
-import { Resolver, Query, Mutation, ObjectType, Field, Arg, Ctx, UseMiddleware } from "type-graphql";
+import { Resolver, Query, Mutation, ObjectType, Field, Arg, Ctx } from "type-graphql";
 import { User } from "../entities/User";
-import { Image } from "../entities/Image";
-import { CredentialsInput, ImageInput } from "../gql-types/input";
+import { CredentialsInput } from "../gql-types/input";
 import { InputError } from "../gql-types/error";
 import { validateSignup } from '../utilities/validators';
 import argon2 from "argon2";
 import { CustomContext } from "../types";
-import { isAuthenticated } from "../middleware/isAuthenticated";
 
 
 @ObjectType()
@@ -127,36 +125,6 @@ export default class UserResolver {
                 }
             });
         });
-    }
-
-    @Mutation(() => Boolean)
-    @UseMiddleware(isAuthenticated)
-    async upload(
-        @Arg('image') { file, label }: ImageInput,
-        @Ctx() { req, uploader }: CustomContext
-    ): Promise<Boolean> {
-
-        const { createReadStream, filename } = await file;
-        // console.log(filename);
-        // console.log(createReadStream);
-
-        try{
-            const user = await User.findOne({
-                where: { id: req.session.userId }
-            });
-            const s3Key = uploader.createKeyFromFilename(filename, user!.username);
-            const uploadStream = uploader.createUploadStream(s3Key);
-            createReadStream().pipe(uploadStream.writeStream);
-            const result = await uploadStream.promise;
-
-            // User is guaranteed to exist as they are authenticated
-            await Image.create({ location: result.Location, label, user }).save();
-
-            return result != undefined && result != null;
-        }catch(error){
-            return false;
-        }
-
     }
 
 }
