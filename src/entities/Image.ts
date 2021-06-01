@@ -1,4 +1,4 @@
-import { Entity, PrimaryGeneratedColumn, Column, ManyToOne, BaseEntity } from "typeorm";
+import { Entity, PrimaryGeneratedColumn, Column, ManyToOne, BaseEntity, CreateDateColumn } from "typeorm";
 import { User } from "./User";
 import { Field, ObjectType, Int} from "type-graphql";
 
@@ -20,6 +20,10 @@ export class Image extends BaseEntity {
 
     @Field(() => Int)
     @ManyToOne(() => User, user => user.images)
-    user: User;
+    user!: User;
+
+    @Field(() => String)
+    @CreateDateColumn()
+    createdAt: Date;
 
 }
