@@ -30,6 +30,7 @@
     "aws-sdk": "^2.918.0",
     "connect-redis": "^5.2.0",
     "cors": "^2.8.5",
+    "dayjs": "^1.10.5",
     "dotenv": "^9.0.2",
     "express": "^4.17.1",
     "express-session": "^1.17.1",

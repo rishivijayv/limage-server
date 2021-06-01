@@ -1,6 +1,8 @@
 import AWS from "aws-sdk";
 import stream from "stream";
 import { S3UploadConfig } from "../types";
+import path from "path";
+import dayjs from "dayjs";
 
 type S3UploadStream = {
     writeStream: stream.PassThrough;
@@ -35,5 +37,12 @@ export class Uploader {
             })
             .promise()
         };
+    }
+
+    public createKeyFromFilename(filename: string, username: string): string {
+        const extension = path.extname(filename);
+        const newFilename = `${username}-${dayjs().unix()}`;
+
+        return `${newFilename}${extension}`;
     }
 }

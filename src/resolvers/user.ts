@@ -137,26 +137,23 @@ export default class UserResolver {
     ): Promise<Boolean> {
 
         const { createReadStream, filename } = await file;
-        console.log(filename);
-        console.log(createReadStream);
-        const uploadStream = uploader.createUploadStream(filename);
-        createReadStream().pipe(uploadStream.writeStream);
-        const result = await uploadStream.promise;
+        // console.log(filename);
+        // console.log(createReadStream);
 
         try{
             const user = await User.findOne({
                 where: { id: req.session.userId }
             });
+            const s3Key = uploader.createKeyFromFilename(filename, user!.username);
+            const uploadStream = uploader.createUploadStream(s3Key);
+            createReadStream().pipe(uploadStream.writeStream);
+            const result = await uploadStream.promise;
 
             // User is guaranteed to exist as they are authenticated
             await Image.create({ location: result.Location, label, user }).save();
-        }catch(error){
-            return false;
-        }
 
-        if(result){
-            return true;
-        }else{
+            return result != undefined && result != null;
+        }catch(error){
             return false;
         }
 
