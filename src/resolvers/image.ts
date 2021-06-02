@@ -1,9 +1,20 @@
-import { Resolver, UseMiddleware, Mutation, Arg, Ctx } from "type-graphql";
+import { Resolver, UseMiddleware, Mutation, Arg, Ctx, Query, Int, ObjectType, Field } from "type-graphql";
 import { CustomContext } from "../types";
 import { isAuthenticated } from "../middleware/isAuthenticated";
 import { ImageInput } from "../gql-types/input";
 import { User } from "../entities/User";
 import { Image } from "../entities/Image";
+import { getConnection } from "typeorm";
+
+@ObjectType()
+class UploadedImageResponse {
+
+    @Field(() => [Image])
+    images: Image[];
+
+    @Field()
+    hasMore: boolean;
+}
 
 
 @Resolver()
@@ -35,5 +46,37 @@ export default class ImageResolver {
             return false;
         }
 
+    }
+
+    @Query(() => UploadedImageResponse)
+    @UseMiddleware(isAuthenticated)
+    async uploadedImages(
+        @Arg('limit', () => Int) limit: number,
+        @Arg('cursor', () => String, { nullable: true }) cursor: string | null,
+        @Ctx() { req }: CustomContext
+    ): Promise<UploadedImageResponse> {
+        const limitCap = Math.min(9, limit);
+        const hasMoreLimit = limitCap + 1;
+
+        const qb = getConnection()
+            .getRepository(Image)
+            .createQueryBuilder('"userImages"')
+            .orderBy('"createdAt"', "DESC")
+            .where('"userId" = :userId', { userId: req.session.userId })
+            .take(hasMoreLimit);
+
+        if(cursor) {
+            qb.andWhere('"createdAt" < :cursor', {
+                cursor: new Date(parseInt(cursor))
+            });
+        }
+        const images = await qb.getMany();
+        const hasMore = images.length === hasMoreLimit;
+        images.pop();
+
+        return {
+            images,
+            hasMore
+        };
     }
 }
