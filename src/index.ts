@@ -28,7 +28,8 @@ async function main(){
         database: process.env.DB_NAME,
         entities: [ User, Image ],
         synchronize: !__prod__,
-        logNotifications: true
+        logNotifications: true,
+        logging: true
     });
 
     const app = express();

@@ -60,16 +60,17 @@ export default class ImageResolver {
 
         const qb = getConnection()
             .getRepository(Image)
-            .createQueryBuilder('"userImages"')
+            .createQueryBuilder("userimages")
             .orderBy('"createdAt"', "DESC")
             .where('"userId" = :userId', { userId: req.session.userId })
-            .take(hasMoreLimit);
 
         if(cursor) {
             qb.andWhere('"createdAt" < :cursor', {
                 cursor: new Date(parseInt(cursor))
             });
         }
+
+        qb.take(hasMoreLimit);
         const images = await qb.getMany();
         const hasMore = images.length === hasMoreLimit;
         images.pop();
