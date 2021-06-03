@@ -87,4 +87,29 @@ export default class ImageResolver {
             hasMore
         };
     }
+
+    @Mutation(() => Boolean)
+    @UseMiddleware(isAuthenticated)
+    async deleteUploadedImage(
+        @Arg("imageId", () => Int) imageId: number,
+        @Ctx() { uploader }: CustomContext
+    ): Promise<Boolean> {
+        const image = await Image.findOne({
+            where: { id: imageId }
+        });
+        if(!image) return false;
+
+        const imageKey = image.location.substring(image.location.lastIndexOf('/') + 1);
+        const deleteImage = uploader.deleteImageByKey(imageKey);
+        
+        try {
+            await deleteImage.promise;
+            // Delete from DB
+            await Image.delete({ id: imageId });
+            return true;
+        }catch(_){
+            return false;
+        }        
+         
+    }
 }

@@ -3,10 +3,15 @@ import stream from "stream";
 import { S3UploadConfig } from "../types";
 import path from "path";
 import dayjs from "dayjs";
+import { PromiseResult } from "aws-sdk/lib/request";
 
 type S3UploadStream = {
     writeStream: stream.PassThrough;
     promise: Promise<AWS.S3.ManagedUpload.SendData>
+}
+
+type S3DeleteImage = {
+    promise: Promise<PromiseResult<AWS.S3.DeleteObjectOutput, AWS.AWSError>>
 }
 
 export class Uploader {
@@ -44,5 +49,15 @@ export class Uploader {
         const newFilename = `${username}-${dayjs().unix()}`;
 
         return `${newFilename}${extension}`;
+    }
+
+    public deleteImageByKey(key: string): S3DeleteImage {
+        return {
+            promise: this.s3.deleteObject({
+                Bucket: process.env.AWS_S3_BUCKET_NAME!,
+                Key: key
+            })
+            .promise()
+        };
     }
 }
