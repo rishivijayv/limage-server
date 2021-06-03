@@ -73,7 +73,14 @@ export default class ImageResolver {
         qb.take(hasMoreLimit);
         const images = await qb.getMany();
         const hasMore = images.length === hasMoreLimit;
-        images.pop();
+        
+        if(hasMore){
+            images.pop();
+        }
+        
+
+        console.log("Returning this to the user");
+        console.log(images);
 
         return {
             images,
