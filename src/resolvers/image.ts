@@ -51,13 +51,10 @@ export default class ImageResolver {
     @Query(() => UploadedImageResponse)
     @UseMiddleware(isAuthenticated)
     async uploadedImages(
-        @Arg('limit', () => Int) limit: number,
+        @Arg('limit', () => Int, { nullable: true }) limit: number,
         @Arg('cursor', () => String, { nullable: true }) cursor: string | null,
         @Ctx() { req }: CustomContext
     ): Promise<UploadedImageResponse> {
-        const limitCap = Math.min(9, limit);
-        const hasMoreLimit = limitCap + 1;
-
         const qb = getConnection()
             .getRepository(Image)
             .createQueryBuilder("userimages")
@@ -70,9 +67,16 @@ export default class ImageResolver {
             });
         }
 
-        qb.take(hasMoreLimit);
+        let limitCap = 0, hasMoreLimit = 0;
+
+        if(limit){
+            limitCap = Math.min(9, limit);
+            hasMoreLimit = limitCap + 1;
+            qb.take(hasMoreLimit);
+        }
+        
         const images = await qb.getMany();
-        const hasMore = images.length === hasMoreLimit;
+        const hasMore = limit !== null ? images.length === hasMoreLimit : false;
         
         if(hasMore){
             images.pop();
