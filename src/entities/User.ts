@@ -1,5 +1,6 @@
 import { Entity, Column, PrimaryGeneratedColumn, BaseEntity, CreateDateColumn, UpdateDateColumn, OneToMany } from "typeorm";
 import { Image } from './Image';
+import { UserLabel } from './UserLabel';
 import { Field, ObjectType } from "type-graphql";
 
 @ObjectType()
@@ -27,4 +28,7 @@ export class User extends BaseEntity {
 
     @OneToMany(() => Image, image => image.user)
     images: Image[];
+
+    @OneToMany(() => UserLabel, label => label.user)
+    labels: UserLabel[];
 }

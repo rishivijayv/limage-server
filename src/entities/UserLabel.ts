@@ -4,7 +4,7 @@ import { Field, ObjectType} from "type-graphql";
 
 @ObjectType()
 @Entity()
-export class Image extends BaseEntity {
+export class UserLabel extends BaseEntity {
 
     @Field()
     @PrimaryGeneratedColumn()
@@ -12,13 +12,9 @@ export class Image extends BaseEntity {
 
     @Field()
     @Column()
-    location!: string;
+    labelName!: string;
 
-    @Field()
-    @Column()
-    label!: string;
-
-    @ManyToOne(() => User, user => user.images, { onDelete: "CASCADE" })
+    @ManyToOne(() => User, user => user.labels, { onDelete: "CASCADE" })
     user!: User;
 
     @Field(() => String)

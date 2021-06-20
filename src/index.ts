@@ -6,6 +6,8 @@ import { buildSchema } from "type-graphql";
 import { graphqlUploadExpress } from "graphql-upload";
 import { User } from './entities/User';
 import { Image } from './entities/Image';
+import { LabelImage } from './entities/LabelImage';
+import { UserLabel } from './entities/UserLabel'; 
 import { __prod__ } from './constants';
 import { CustomContext } from './types';
 import { Uploader } from './utilities/uploader';
@@ -26,7 +28,7 @@ async function main(){
         username: process.env.DB_USERNAME,
         password: process.env.DB_PASSWORD,
         database: process.env.DB_NAME,
-        entities: [ User, Image ],
+        entities: [ User, Image, UserLabel, LabelImage ],
         synchronize: !__prod__,
         logNotifications: true,
         logging: true
