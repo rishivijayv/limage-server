@@ -248,30 +248,6 @@ export default class ImageResolver {
         @Arg('labelId', () => Int) labelId: number
     ): Promise<PaginatedResponse<Image>> {
         const { entities: savedImages, hasMore } = await paginatedQueryResponse<LabelImage>(LabelImage, '"userLabelId" = :labelId', { labelId }, limit, cursor);
-        // const connection = getConnection();
-
-        // const qb = connection
-        //     .getRepository(LabelImage)
-        //     .createQueryBuilder("images")
-        //     .orderBy('"createdAt"', "DESC")
-        //     .where('"userLabelId" = :labelId', { labelId })
-
-        // if(cursor) {
-        //     qb.andWhere('"createdAt" < :cursor', {
-        //         cursor: new Date(parseInt(cursor))
-        //     });
-        // }
-
-        // const limitCap = Math.min(9, limit);
-        // const hasMoreLimit = limitCap + 1;
-        // qb.take(hasMoreLimit);
-
-        // const savedImages = await qb.getMany();
-        // const hasMore = savedImages.length === hasMoreLimit;
-
-        // if(hasMore) {
-        //     savedImages.pop();
-        // }
 
         // Retrieve the images from the images IDs
         const imagesToReturn = await getConnection().getRepository(Image)
@@ -292,34 +268,6 @@ export default class ImageResolver {
     ): Promise<PaginatedResponse<Image>> {
         const imagesToDiscover = await paginatedQueryResponse(Image, "label LIKE :labelPattern", { labelPattern: `%${search}%` }, limit, cursor);
         return imagesToDiscover;
-        // const limitCap = Math.min(9, limit);
-        // const hasMoreLimit = limitCap + 1;
-
-
-        // const qb = getConnection()
-        //     .getRepository(Image)
-        //     .createQueryBuilder("image")
-        //     .orderBy('"createdAt"', "DESC")
-        //     .where("image.label LIKE :labelPattern", { labelPattern: `%${search}%` })
-
-        // if (cursor) {
-        //     qb.andWhere('"createdAt" < :cursor', {
-        //         cursor: new Date(parseInt(cursor))
-        //     });
-        // }
-        // qb.take(hasMoreLimit)
-
-        // const images = await qb.getMany();
-        // const hasMore = images.length === hasMoreLimit
-        
-        // if(hasMore){
-        //     images.pop()
-        // }
-
-        // return {
-        //     images,
-        //     hasMore
-        // }
 
     }
 
