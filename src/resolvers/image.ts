@@ -35,6 +35,9 @@ class PaginatedResponse<T> {
 const PaginatedImageResponse = GenerateGqlPaginatedResponse(Image, "Image");
 type PaginatedImageResponse = InstanceType<typeof PaginatedImageResponse>;
 
+const PaginatedUserLabelResponse = GenerateGqlPaginatedResponse(UserLabel, "UserLabel");
+type PaginatedUserLabelResponse = InstanceType<typeof PaginatedUserLabelResponse>;
+
 function paginatedQueryBuilder<T>(repoName: EntityTarget<T>, condition: string, conditionParameter: GenericObject, limit: number, cursor: string | null): SelectQueryBuilder<T> {
     const qb = getConnection()
         .getRepository(repoName)
@@ -239,6 +242,16 @@ export default class ImageResolver {
     ): Promise<PaginatedResponse<Image>> {
         const paginatedImages = await paginatedQueryResponse<Image>(Image, '"userId" = :userId', { userId: req.session.userId }, limit, cursor);
         return paginatedImages;
+    }
+
+    @Query(() => PaginatedUserLabelResponse)
+    @UseMiddleware(isAuthenticated)
+    async labelsForUser(
+        @Arg('paginatedInput') { limit, cursor }: PaginatedInput,
+        @Ctx() { req }: CustomContext
+    ): Promise<PaginatedResponse<UserLabel>> {
+        const paginatedUserLabels = await paginatedQueryResponse<UserLabel>(UserLabel, '"userId" = :userId', { userId: req.session.userId }, limit, cursor);
+        return paginatedUserLabels;
     }
 
     @Query(() => PaginatedImageResponse)
