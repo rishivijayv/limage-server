@@ -1,21 +1,77 @@
 import { Resolver, UseMiddleware, Mutation, Arg, Ctx, Query, Int, ObjectType, Field } from "type-graphql";
-import { CustomContext } from "../types";
+import { CustomContext, GenericObject } from "../types";
 import { isAuthenticated } from "../middleware/isAuthenticated";
-import { ImageInput } from "../gql-types/input";
+import { ImageInput, ImageSaveInput, DeleteLabelImageInput, PaginatedInput } from "../gql-types/input";
 import { User } from "../entities/User";
 import { Image } from "../entities/Image";
-import { getConnection } from "typeorm";
+import { UserLabel } from "../entities/UserLabel";
+import { LabelImage } from "../entities/LabelImage";
+import { getConnection, EntityTarget, SelectQueryBuilder } from "typeorm";
+import GenerateGqlPaginatedResponse from "../gql-types/pagination";
 
 @ObjectType()
-class UploadedImageResponse {
-
-    @Field(() => [Image])
-    images: Image[];
+class SaveImageResponse {
+    @Field()
+    saveSuccessful: boolean;
 
     @Field()
-    hasMore: boolean;
+    descrtiption: string;
 }
 
+@ObjectType()
+class DeleteLabelImageResponse {
+    @Field()
+    deleteSuccessful: boolean
+
+    @Field(() => Int)
+    imagesLeftInLabel?: number
+}
+
+class PaginatedResponse<T> {
+    entities: T[]
+    hasMore: boolean
+}
+
+const PaginatedImageResponse = GenerateGqlPaginatedResponse(Image, "Image");
+type PaginatedImageResponse = InstanceType<typeof PaginatedImageResponse>;
+
+function paginatedQueryBuilder<T>(repoName: EntityTarget<T>, condition: string, conditionParameter: GenericObject, limit: number, cursor: string | null): SelectQueryBuilder<T> {
+    const qb = getConnection()
+        .getRepository(repoName)
+        .createQueryBuilder()
+        .where(condition, conditionParameter)
+
+    if (cursor) {
+        qb.andWhere('"createdAt" < :cursor', {
+            cursor: new Date(parseInt(cursor))
+        });
+    }
+    qb.orderBy('"createdAt"', "DESC").take(limit);
+
+    return qb;
+
+}
+
+async function paginatedQueryResponse<T>(repoName: EntityTarget<T>, condition: string, conditionParameter: GenericObject, limit: number, cursor: string | null): Promise<PaginatedResponse<T>> {
+    const limitCap = Math.min(9, limit);
+    const hasMoreLimit = limitCap + 1;
+
+    const query = paginatedQueryBuilder(repoName, condition, conditionParameter, hasMoreLimit, cursor);
+    const entities = await query.getMany();
+    const hasMore = entities.length === hasMoreLimit
+    
+    if(hasMore){
+        entities.pop()
+    }
+
+    return {
+        entities,
+        hasMore
+    }
+
+    
+
+}
 
 @Resolver()
 export default class ImageResolver {
@@ -48,48 +104,223 @@ export default class ImageResolver {
 
     }
 
-    @Query(() => UploadedImageResponse)
+    @Mutation(() => DeleteLabelImageResponse)
+    @UseMiddleware(isAuthenticated)
+    async deleteSavedImage(
+        @Arg('imageInfo') { imageId, labelId }: DeleteLabelImageInput
+    ): Promise<DeleteLabelImageResponse> {
+        const connection = getConnection();
+        const queryRunner = connection.createQueryRunner();
+
+        await queryRunner.startTransaction();
+
+        try {
+            // Delete current image in current label
+            await queryRunner.query(`DELETE FROM "label_image" WHERE "userLabelId" = ${labelId} AND "imageId" = ${imageId}`);
+
+            // Check if any more images left in label
+            const imagesInLabel = await queryRunner.manager.getRepository(LabelImage)
+                .createQueryBuilder()
+                .where('"userLabelId" = :labelid', {labelid: labelId})
+                .getMany();
+            
+            // If no more images in the label, delete the label and notify client
+            if(imagesInLabel.length === 0){
+                await queryRunner.query(`DELETE FROM "user_label" WHERE id = ${labelId}`);
+            }
+
+            queryRunner.commitTransaction();
+
+            return {
+                deleteSuccessful: true,
+                imagesLeftInLabel: imagesInLabel.length
+            }
+
+
+        }catch(err){
+            queryRunner.rollbackTransaction();
+            return {
+                deleteSuccessful: false
+            }
+        }finally {
+            queryRunner.release();
+        }
+    }
+
+    @Mutation(() => SaveImageResponse)
+    @UseMiddleware(isAuthenticated)
+    async saveImage(
+        @Arg('imageInfo') { imageId, labelName }: ImageSaveInput,
+        @Ctx() { req }: CustomContext
+    ): Promise<SaveImageResponse> {
+
+        const userId = req.session.userId!;
+        const connection = getConnection();
+        const queryRunner = connection.createQueryRunner();
+
+        await queryRunner.connect();
+
+        await queryRunner.startTransaction();
+
+        try {
+
+            // Check if user already has images for this label
+            const userLabel = await queryRunner.manager.getRepository(UserLabel)
+                .createQueryBuilder()
+                .where(`"labelName" = :name`, { name: labelName })
+                .andWhere('"userId" = :userId', { userId: userId })
+                .getOne();
+
+            console.log("This is stuff", userLabel);
+
+            let labelId = userLabel?.id;
+
+            if(labelId === undefined){
+                // Retrieve the user
+                const user = await queryRunner.manager.findOne(User, {
+                    where: { id: userId }
+                });
+
+                // Create the label
+                const labelInsertResult = await queryRunner.manager.createQueryBuilder()
+                    .insert()
+                    .into(UserLabel)
+                    .values([
+                        { labelName: labelName, user: user }
+                    ])
+                    .returning("id")
+                    .execute();
+                
+                labelId = labelInsertResult.identifiers[0].id as number;
+            }
+
+
+            // Check if image already saved in label
+            const imageInLabel = await queryRunner.manager.getRepository(LabelImage)
+                .createQueryBuilder()
+                .where('"userLabelId" = :labelid', { labelid: labelId })
+                .andWhere('"imageId" = :imageid', { imageid: imageId })
+                .getOne();
+
+            if (imageInLabel) {
+                return {
+                    saveSuccessful: false,
+                    descrtiption: "You have already saved this image"
+                };
+            }
+
+            // Save the image in the LabelImage relation
+            await queryRunner.query(`INSERT INTO "label_image" ("userLabelId", "imageId") VALUES (${labelId!}, ${imageId})`);
+
+            await queryRunner.commitTransaction();
+
+            return {
+                saveSuccessful: true,
+                descrtiption: "Image successfully saved"
+            }
+
+
+        }catch(error) {
+            await queryRunner.rollbackTransaction();
+            return {
+                saveSuccessful: false,
+                descrtiption: "Something went wrong. Please try again later."
+            };
+        } finally {
+            await queryRunner.release();
+        }
+    }
+
+    @Query(() => PaginatedImageResponse)
     @UseMiddleware(isAuthenticated)
     async uploadedImages(
-        @Arg('limit', () => Int, { nullable: true }) limit: number,
-        @Arg('cursor', () => String, { nullable: true }) cursor: string | null,
+        @Arg('paginatedInput') { limit, cursor }: PaginatedInput,
         @Ctx() { req }: CustomContext
-    ): Promise<UploadedImageResponse> {
-        const qb = getConnection()
-            .getRepository(Image)
-            .createQueryBuilder("userimages")
-            .orderBy('"createdAt"', "DESC")
-            .where('"userId" = :userId', { userId: req.session.userId })
+    ): Promise<PaginatedResponse<Image>> {
+        const paginatedImages = await paginatedQueryResponse<Image>(Image, '"userId" = :userId', { userId: req.session.userId }, limit, cursor);
+        return paginatedImages;
+    }
 
-        if(cursor) {
-            qb.andWhere('"createdAt" < :cursor', {
-                cursor: new Date(parseInt(cursor))
-            });
-        }
+    @Query(() => PaginatedImageResponse)
+    @UseMiddleware(isAuthenticated)
+    async savedImages(
+        @Arg('paginatedInput') { limit, cursor }: PaginatedInput,
+        @Arg('labelId', () => Int) labelId: number
+    ): Promise<PaginatedResponse<Image>> {
+        const { entities: savedImages, hasMore } = await paginatedQueryResponse<LabelImage>(LabelImage, '"userLabelId" = :labelId', { labelId }, limit, cursor);
+        // const connection = getConnection();
 
-        let limitCap = 0, hasMoreLimit = 0;
+        // const qb = connection
+        //     .getRepository(LabelImage)
+        //     .createQueryBuilder("images")
+        //     .orderBy('"createdAt"', "DESC")
+        //     .where('"userLabelId" = :labelId', { labelId })
 
-        if(limit){
-            limitCap = Math.min(9, limit);
-            hasMoreLimit = limitCap + 1;
-            qb.take(hasMoreLimit);
-        }
+        // if(cursor) {
+        //     qb.andWhere('"createdAt" < :cursor', {
+        //         cursor: new Date(parseInt(cursor))
+        //     });
+        // }
+
+        // const limitCap = Math.min(9, limit);
+        // const hasMoreLimit = limitCap + 1;
+        // qb.take(hasMoreLimit);
+
+        // const savedImages = await qb.getMany();
+        // const hasMore = savedImages.length === hasMoreLimit;
+
+        // if(hasMore) {
+        //     savedImages.pop();
+        // }
+
+        // Retrieve the images from the images IDs
+        const imagesToReturn = await getConnection().getRepository(Image)
+            .createQueryBuilder("image")
+            .where("id IN (:...ids)", { ids: savedImages.map(savedImage => savedImage.imageId) })
+            .getMany();
         
-        const images = await qb.getMany();
-        const hasMore = limit !== null ? images.length === hasMoreLimit : false;
-        
-        if(hasMore){
-            images.pop();
-        }
-        
-
-        console.log("Returning this to the user");
-        console.log(images);
-
         return {
-            images,
+            entities: imagesToReturn,
             hasMore
-        };
+        }
+    }
+
+    @Query(() => PaginatedImageResponse)
+    async discoverImages(
+        @Arg('paginatedInput') { limit, cursor }: PaginatedInput,
+        @Arg("search") search: string 
+    ): Promise<PaginatedResponse<Image>> {
+        const imagesToDiscover = await paginatedQueryResponse(Image, "label LIKE :labelPattern", { labelPattern: `%${search}%` }, limit, cursor);
+        return imagesToDiscover;
+        // const limitCap = Math.min(9, limit);
+        // const hasMoreLimit = limitCap + 1;
+
+
+        // const qb = getConnection()
+        //     .getRepository(Image)
+        //     .createQueryBuilder("image")
+        //     .orderBy('"createdAt"', "DESC")
+        //     .where("image.label LIKE :labelPattern", { labelPattern: `%${search}%` })
+
+        // if (cursor) {
+        //     qb.andWhere('"createdAt" < :cursor', {
+        //         cursor: new Date(parseInt(cursor))
+        //     });
+        // }
+        // qb.take(hasMoreLimit)
+
+        // const images = await qb.getMany();
+        // const hasMore = images.length === hasMoreLimit
+        
+        // if(hasMore){
+        //     images.pop()
+        // }
+
+        // return {
+        //     images,
+        //     hasMore
+        // }
+
     }
 
     @Mutation(() => Boolean)

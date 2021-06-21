@@ -1,4 +1,4 @@
-import { Entity, PrimaryGeneratedColumn, Column, ManyToOne, BaseEntity, CreateDateColumn } from "typeorm";
+import { Entity, PrimaryGeneratedColumn, Column, ManyToOne, BaseEntity, CreateDateColumn, JoinColumn } from "typeorm";
 import { User } from "./User";
 import { Field, ObjectType} from "type-graphql";
 
@@ -18,7 +18,11 @@ export class Image extends BaseEntity {
     @Column()
     label!: string;
 
+    @Column({ name: "userId" })
+    userId: number
+
     @ManyToOne(() => User, user => user.images, { onDelete: "CASCADE" })
+    @JoinColumn({ name: "userId" })
     user!: User;
 
     @Field(() => String)

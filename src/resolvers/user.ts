@@ -24,6 +24,7 @@ export default class UserResolver {
     async me(
         @Ctx() { req }: CustomContext
     ) {
+        console.log(req.session.userId);
         if(req.session.userId){
             const currUser = await User.findOne(
                 {
