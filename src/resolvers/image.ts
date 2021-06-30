@@ -258,8 +258,21 @@ export default class ImageResolver {
     @UseMiddleware(isAuthenticated)
     async savedImages(
         @Arg('paginatedInput') { limit, cursor }: PaginatedInput,
-        @Arg('labelId', () => Int) labelId: number
+        @Arg('labelId', () => Int) labelId: number,
+        @Ctx() { req }: CustomContext
     ): Promise<PaginatedResponse<Image>> {
+        const userWithLabelId = await getConnection().getRepository(UserLabel)
+            .createQueryBuilder("userlabel")
+            .where('id = :labelId AND "userId" = :userId', { labelId, userId: req.session.userId })
+            .getCount();
+
+        if(userWithLabelId === 0){
+            // User does not have any labels with the provided ID
+            return {
+                entities: [],
+                hasMore: false
+            }
+        }
         const { entities: savedImages, hasMore } = await paginatedQueryResponse<LabelImage>(LabelImage, '"userLabelId" = :labelId', { labelId }, limit, cursor);
 
         // Retrieve the images from the images IDs
