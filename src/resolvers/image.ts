@@ -66,7 +66,6 @@ async function paginatedQueryResponse<T>(repoName: EntityTarget<T>, condition: s
     if(hasMore){
         entities.pop()
     }
-
     return {
         entities,
         hasMore
@@ -174,7 +173,6 @@ export default class ImageResolver {
                 .andWhere('"userId" = :userId', { userId: userId })
                 .getOne();
 
-            console.log("This is stuff", userLabel);
 
             let labelId = userLabel?.id;
 
@@ -274,15 +272,22 @@ export default class ImageResolver {
             }
         }
         const { entities: savedImages, hasMore } = await paginatedQueryResponse<LabelImage>(LabelImage, '"userLabelId" = :labelId', { labelId }, limit, cursor);
-
         // Retrieve the images from the images IDs
         const imagesToReturn = await getConnection().getRepository(Image)
             .createQueryBuilder("image")
             .where("id IN (:...ids)", { ids: savedImages.map(savedImage => savedImage.imageId) })
             .getMany();
         
+        const imagesWithLabelTimestamp = imagesToReturn.map(image => {
+            const labelEntity = savedImages.find(label => label.imageId === image.id)!;
+            return {
+                ...image,
+                createdAt: labelEntity.createdAt
+            } as Image;
+        });
+        
         return {
-            entities: imagesToReturn,
+            entities: imagesWithLabelTimestamp,
             hasMore
         }
     }
