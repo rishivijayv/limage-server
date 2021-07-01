@@ -59,6 +59,5 @@ Patrick realize that they might have gone a little over the top and uploaded too
 4. [Body of Water Under Green and Blue Sky](https://www.pexels.com/photo/body-of-water-under-green-and-blue-sky-2113558/) by Tobias Bjørkli
 
 ## Images labeled with **landscape**
-1. [White Clouds](https://www.pexels.com/photo/white-clouds-2775196/) by Roberto Nickson
-2. [Photo of Forest with Fog](https://www.pexels.com/photo/photo-of-forest-with-fog-1671324/) by 
+1. [Photo of Forest with Fog](https://www.pexels.com/photo/photo-of-forest-with-fog-1671324/) by 
 Francesco Ungaro
