@@ -16,6 +16,8 @@ This repository contains the code corresponding to the **GraphQL API** that is s
 | middleware      | Utilities that process incoming requests before the resolver code is executed |
 | utilities       | Helper functions used in other directories |
 
+You can find the code containing the code for the frontend for Limage [here](https://github.com/rishivijayv/limage-frontend)
+
 # Demo
 Let's see how a normal user would interact with Limage, from them discovering it for the first time to saving images found on the platform and even uploading some images of their own. All images used in this demo are taken from [Pexels](https://www.pexels.com/). The credits to the original uploaders of the images can be found at the end of this README document.
 
