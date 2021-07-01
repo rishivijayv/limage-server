@@ -15,6 +15,7 @@ This repository contains the code corresponding to the **GraphQL API** that is s
 | gql-types       | Some input and return types for GraphQL resolvers |
 | middleware      | Utilities that process incoming requests before the resolver code is executed |
 | utilities       | Helper functions used in other directories |
+| resolvers       | GraphQL resolvers which process requests from the client |
 
 You can find the code containing the code for the frontend for Limage [here](https://github.com/rishivijayv/limage-frontend)
 
